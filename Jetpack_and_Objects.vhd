@@ -18,6 +18,11 @@ ENTITY bat_n_ball IS
 END bat_n_ball;
 
 ARCHITECTURE Behavioral OF bat_n_ball IS
+SIGNAL obstacle_x : INTEGER := 800;
+SIGNAL gap_y : INTEGER := 300;
+CONSTANT gap_size : INTEGER := 150;
+SIGNAL obstacle_on : STD_LOGIC;
+
     CONSTANT bsize        : INTEGER := 8;
     CONSTANT bat_h        : INTEGER := 3;
     CONSTANT bat_w_start  : INTEGER := 40;
@@ -31,7 +36,9 @@ ARCHITECTURE Behavioral OF bat_n_ball IS
     SIGNAL ball_x : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(400, 11);
     SIGNAL ball_y : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(300, 11);
 
-    CONSTANT bat_y : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(500, 11);
+    --CONSTANT bat_y : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(500, 11);
+    SIGNAL player_y : INTEGER := 300;
+    SIGNAL velocity_y : INTEGER := 0;
 
     SIGNAL ball_x_motion : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(base_speed, 11);
     SIGNAL ball_y_motion : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(base_speed, 11);
@@ -41,9 +48,9 @@ ARCHITECTURE Behavioral OF bat_n_ball IS
     SIGNAL hit_latched : STD_LOGIC := '0';
 
 BEGIN
-    red   <= NOT bat_on;
-    green <= NOT ball_on;
-    blue  <= NOT ball_on;
+red   <= NOT (bat_on OR obstacle_on);
+green <= NOT obstacle_on;
+blue  <= NOT bat_on;
 
     hits <= CONV_STD_LOGIC_VECTOR(hit_count, 16);
 
@@ -69,106 +76,158 @@ BEGIN
         END IF;
     END PROCESS;
 
-    batdraw : PROCESS (bat_x, pixel_row, pixel_col, bat_w_cur)
-    BEGIN
-        IF ((pixel_col >= bat_x - bat_w_cur) OR (bat_x <= bat_w_cur)) AND
-           (pixel_col <= bat_x + bat_w_cur) AND
-           (pixel_row >= bat_y - bat_h) AND
-           (pixel_row <= bat_y + bat_h) THEN
+batdraw : PROCESS (bat_x, pixel_row, pixel_col)
+
+    type sprite_type is array (0 to 31) of std_logic_vector(127 downto 0);
+
+    variable sprite : sprite_type := (
+"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+"00000000000000000000000000000000000000000000010101010000000000000100001100110011001101000100000001110111000000000000000000000000",
+"00000000000000000000000000000000000000000000100101010101000000000100010001000100010001000111010000000000001100000000000000000000",
+"00000000000000000000000000000000000000000000100101010101010100000100010001000100010000000000010101010101010100000000000000000000",
+"00000000000000000000000000000000000000000000000001010101010101010000010001110000010101010110010101010101010101010000000000000000",
+"00000000000000000000000000000000000000001000100010010101010101010101000001110101010101010000000001010101010101010000000000000000",
+"00000000000000000000000000000000000010001000100010010101010101010101010101110101010101010000000001100101010101010000000000000000",
+"00000000000000000000000000000000100010001000100000001001010101010101010101110101010101010000100110010110010101010000000000000000",
+"00000000000000000000000000001001100010001000100000001001010101010101000001110101010101010000000000010110011010010000000000000000",
+"00000000000000000000000000011001100010000000100110011001010101010101011100000101100100000100010001000000100100000001010101011001",
+"00000000000000000000000000011001100000000111000001010101010101010111011101010101000100000100010001000100011000000101010110010000",
+"00000000000000000000000100010000000000100000011101010101010101110111010100010010000101100100010001000100000001011001100100000000",
+"00000000000000000011000000000001000000000000011100000101011101110001001000100010100010000000010001000100000010010000000000000000",
+ "00000000000000110100010000010010000000000110000001110111011110000010001000100010100010000000100101000100000000000000000000000000",
+ "00000000001101000100010001110010011001100110011001110111100000100010001000100010001000100101010101110000000000000000000000000000",
+"00000000001101000100010000000110011001100110011001100111000000100010001000100010001000000101011100000000000000000000000000000000",
+"00000011000000000100010001110110011001100110011001100000011110010010001000100010001001010000011100000000000000000000000000000000",
+"00000000011101000100010000010110011001100110011001100110100110011001001000100010000000000111000000000000000000000000000000000000",
+"00000000000001000100010001000111011001100110011001100110011010011001100100101000011101110000000000000000000000000000000000000000",
+"00000000000001000111010001000001011101100110011001100110011001111001011100010111000000000000000000000000000000000000000000000000",
+"00000000000000000000010001000000000000000110011001100110011001100110001001110111000000000000000000000000000000000000000000000000",
+"00000000000000000100010000000000000000000110011001100110011001100010011000100000000000000000000000000000000000000000000000000000",
+"00000000000000000000000000000000010001000111011001100110011000000110001000000000000000000000000000000000000000000000000000000000",
+"00000000000000000000000000000100010001000100000001100110001000000000000000000000000000000000000000000000000000000000000000000000",
+"00000000000000000000000000000100010001000100010001000000000000000000000000000000000000000000000000000000000000000000000000000000",
+"00000000000000000000000000000000010001000001010001000000000000000000000000000000000000000000000000000000000000000000000000000000",
+"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    );
+
+    variable px, py : INTEGER;
+    variable bx, by : INTEGER;
+    variable pixel_bits : std_logic_vector(3 downto 0);
+    variable idx : INTEGER;
+
+BEGIN
+    --bx := CONV_INTEGER(bat_x);
+    bx := 200;  -- fixed x position
+    by := player_y;
+
+    px := CONV_INTEGER(pixel_col) - bx;
+    py := CONV_INTEGER(pixel_row) - by;
+
+    bat_on <= '0';
+
+    IF (px >= 0 AND px < 32 AND py >= 0 AND py < 32) THEN
+
+        idx := 127 - (px * 4);
+        pixel_bits := sprite(py)(idx downto idx-3);
+
+        IF pixel_bits /= "0000" THEN
             bat_on <= '1';
-        ELSE
-            bat_on <= '0';
         END IF;
-    END PROCESS;
+    END IF;
+END PROCESS;
+
+
+obstacledraw : PROCESS(pixel_row, pixel_col, obstacle_x, gap_y)
+BEGIN
+    obstacle_on <= '0';
+
+    -- TOP PIPE
+    IF (pixel_col >= obstacle_x AND pixel_col <= obstacle_x + 40 AND
+        pixel_row <= gap_y - gap_size/2) THEN
+        obstacle_on <= '1';
+
+    -- BOTTOM PIPE
+    ELSIF (pixel_col >= obstacle_x AND pixel_col <= obstacle_x + 40 AND
+           pixel_row >= gap_y + gap_size/2) THEN
+        obstacle_on <= '1';
+    END IF;
+END PROCESS;
+
+
 
     mball : PROCESS
-        VARIABLE temp      : STD_LOGIC_VECTOR (11 DOWNTO 0);
-        VARIABLE speed_now : INTEGER;
-        VARIABLE speed_slv : STD_LOGIC_VECTOR (10 DOWNTO 0);
-        VARIABLE x_hit     : BOOLEAN;
-        VARIABLE y_hit     : BOOLEAN;
-        VARIABLE hit_now   : BOOLEAN;
-    BEGIN
-        WAIT UNTIL rising_edge(v_sync);
+BEGIN
+    WAIT UNTIL rising_edge(v_sync);
 
-        speed_now := base_speed + hit_count;
-        IF speed_now > 15 THEN
-            speed_now := 15;
+    -- START GAME
+    IF (serve = '1') AND (game_on = '0') THEN
+        game_on <= '1';
+
+        -- reset player
+        player_y   <= 300;
+        velocity_y <= 0;
+
+        -- reset obstacle
+        obstacle_x <= 800;
+        gap_y      <= 300;
+
+    ELSIF game_on = '1' THEN
+
+        ------------------------------------------------------------------
+        -- OBSTACLE MOVEMENT
+        ------------------------------------------------------------------
+        obstacle_x <= obstacle_x - 5;
+
+        -- reset when off screen
+        IF obstacle_x < 0 THEN
+            obstacle_x <= 800;
+
+            -- pseudo-random gap
+            gap_y <= (gap_y + 137) mod 500 + 50;
         END IF;
-        speed_slv := CONV_STD_LOGIC_VECTOR(speed_now, 11);
 
-        IF (serve = '1') AND (game_on = '0') THEN
-            game_on       <= '1';
-            hit_count     <= 0;
-            bat_w_cur     <= bat_w_start;
-            hit_latched   <= '0';
-            ball_x        <= CONV_STD_LOGIC_VECTOR(400, 11);
-            ball_y        <= CONV_STD_LOGIC_VECTOR(440, 11);
-            ball_x_motion <= CONV_STD_LOGIC_VECTOR(base_speed, 11);
-            ball_y_motion <= (NOT CONV_STD_LOGIC_VECTOR(base_speed, 11)) + 1;
+        ------------------------------------------------------------------
+        -- PLAYER PHYSICS
+        ------------------------------------------------------------------
 
-        ELSE
-            IF ball_y <= bsize THEN
-                ball_y_motion <= speed_slv;
-            END IF;
+        -- gravity
+        velocity_y <= velocity_y + 1;
 
-            IF ball_y + bsize >= 600 THEN
-                game_on       <= '0';
-                bat_w_cur     <= bat_w_start;
-                hit_latched   <= '0';
-                ball_y_motion <= (NOT speed_slv) + 1;
-            END IF;
+        -- jump
+        IF serve = '1' THEN
+            velocity_y <= -10;
+        END IF;
 
-            IF ball_x + bsize >= 800 THEN
-                ball_x_motion <= (NOT speed_slv) + 1;
-            ELSIF ball_x <= bsize THEN
-                ball_x_motion <= speed_slv;
-            END IF;
+        -- update position
+        player_y <= player_y + velocity_y;
 
-            x_hit := ((ball_x + bsize/2) >= (bat_x - bat_w_cur)) AND
-                     ((ball_x - bsize/2) <= (bat_x + bat_w_cur));
+        -- keep player on screen
+        IF player_y < 0 THEN
+            player_y <= 0;
+            velocity_y <= 0;
 
-            y_hit := ((ball_y + bsize/2) >= (bat_y - bat_h)) AND
-                     ((ball_y - bsize/2) <= (bat_y + bat_h));
+        ELSIF player_y > 580 THEN
+            player_y <= 580;
+            velocity_y <= 0;
+        END IF;
 
-            hit_now := x_hit AND y_hit;
+        ------------------------------------------------------------------
+        -- COLLISION (optional but recommended)
+        ------------------------------------------------------------------
 
-            IF hit_now AND (hit_latched = '0') THEN
-                hit_count <= hit_count + 1;
-                hit_latched <= '1';
-
-                IF bat_w_cur > bat_w_min THEN
-                    bat_w_cur <= bat_w_cur - 1;
-                END IF;
-
-                ball_y_motion <= (NOT CONV_STD_LOGIC_VECTOR(base_speed + hit_count + 1, 11)) + 1;
-
-                IF ball_x_motion(10) = '1' THEN
-                    ball_x_motion <= (NOT CONV_STD_LOGIC_VECTOR(base_speed + hit_count + 1, 11)) + 1;
-                ELSE
-                    ball_x_motion <= CONV_STD_LOGIC_VECTOR(base_speed + hit_count + 1, 11);
-                END IF;
-            ELSIF NOT hit_now THEN
-                hit_latched <= '0';
-            END IF;
-
-            temp := ('0' & ball_y) + (ball_y_motion(10) & ball_y_motion);
-            IF game_on = '0' THEN
-                ball_y <= CONV_STD_LOGIC_VECTOR(440, 11);
-            ELSIF temp(11) = '1' THEN
-                ball_y <= (OTHERS => '0');
-            ELSE
-                ball_y <= temp(10 DOWNTO 0);
-            END IF;
-
-            temp := ('0' & ball_x) + (ball_x_motion(10) & ball_x_motion);
-            IF game_on = '0' THEN
-                ball_x <= CONV_STD_LOGIC_VECTOR(400, 11);
-            ELSIF temp(11) = '1' THEN
-                ball_x <= (OTHERS => '0');
-            ELSE
-                ball_x <= temp(10 DOWNTO 0);
+        IF (200 + 32 >= obstacle_x AND 200 <= obstacle_x + 40) THEN
+            IF (player_y <= gap_y - gap_size/2 OR
+                player_y + 32 >= gap_y + gap_size/2) THEN
+                game_on <= '0';  -- game over
             END IF;
         END IF;
-    END PROCESS;
+
+    END IF;
+
+END PROCESS;
 END Behavioral;
