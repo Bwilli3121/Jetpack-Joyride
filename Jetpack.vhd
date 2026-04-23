@@ -36,6 +36,7 @@ ARCHITECTURE Behavioral OF pong IS
             v_sync : IN STD_LOGIC;
             pixel_row : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
             pixel_col : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+            --bat_y : IN STD_LOGIC_VECTOR (10 DOWNTO 0);
             bat_x : IN STD_LOGIC_VECTOR (10 DOWNTO 0);
             serve : IN STD_LOGIC;
             red : OUT STD_LOGIC;
