@@ -13,22 +13,16 @@ ENTITY bat_n_ball IS
         red       : OUT STD_LOGIC;
         green     : OUT STD_LOGIC;
         blue      : OUT STD_LOGIC;
-        hits      : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+        hits      : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+        coins     : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
     );
 END bat_n_ball;
 
 ARCHITECTURE Behavioral OF bat_n_ball IS
 SIGNAL obstacle_x : INTEGER := 800;
---SIGNAL gap_y : INTEGER := 300;
-SIGNAL top_height    : INTEGER := 200;
-SIGNAL bottom_start  : INTEGER := 400;
+SIGNAL gap_y : INTEGER := 300;
 CONSTANT gap_size : INTEGER := 150;
 SIGNAL obstacle_on : STD_LOGIC;
-SIGNAL coin_x : INTEGER := 600;
-SIGNAL coin_y : INTEGER := 300;
-SIGNAL coin_on : STD_LOGIC;
-SIGNAL coin_active : STD_LOGIC := '1';
-SIGNAL score : INTEGER := 0;
 
     CONSTANT bsize        : INTEGER := 8;
     CONSTANT bat_h        : INTEGER := 3;
@@ -43,7 +37,6 @@ SIGNAL score : INTEGER := 0;
     SIGNAL ball_x : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(400, 11);
     SIGNAL ball_y : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(300, 11);
 
-    --CONSTANT bat_y : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(500, 11);
     SIGNAL player_y : INTEGER := 300;
     SIGNAL velocity_y : INTEGER := 0;
 
@@ -51,15 +44,17 @@ SIGNAL score : INTEGER := 0;
     SIGNAL ball_y_motion : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(base_speed, 11);
 
     SIGNAL hit_count   : INTEGER := 0;
+    SIGNAL coin_count  : INTEGER := 0;
     SIGNAL bat_w_cur   : INTEGER := bat_w_start;
     SIGNAL hit_latched : STD_LOGIC := '0';
 
 BEGIN
-red   <= NOT (bat_on OR obstacle_on OR coin_on);
-green <= NOT (obstacle_on OR coin_on);
+red   <= NOT (bat_on OR obstacle_on);
+green <= NOT obstacle_on;
 blue  <= NOT bat_on;
 
-hits <= CONV_STD_LOGIC_VECTOR(score, 16);
+    hits  <= CONV_STD_LOGIC_VECTOR(hit_count, 16);
+    coins <= CONV_STD_LOGIC_VECTOR(coin_count, 16);
 
     balldraw : PROCESS (ball_x, ball_y, pixel_row, pixel_col, game_on)
         VARIABLE vx, vy : STD_LOGIC_VECTOR (10 DOWNTO 0);
@@ -128,7 +123,6 @@ batdraw : PROCESS (bat_x, pixel_row, pixel_col)
     variable idx : INTEGER;
 
 BEGIN
-    --bx := CONV_INTEGER(bat_x);
     bx := 200;  -- fixed x position
     by := player_y;
 
@@ -149,39 +143,29 @@ BEGIN
 END PROCESS;
 
 
-obstacledraw : PROCESS(pixel_row, pixel_col, obstacle_x, top_height,bottom_start)
+obstacledraw : PROCESS(pixel_row, pixel_col, obstacle_x, gap_y)
 BEGIN
     obstacle_on <= '0';
 
     -- TOP PIPE
-IF (pixel_col >= obstacle_x AND pixel_col <= obstacle_x + 40) THEN
+    IF (pixel_col >= obstacle_x AND pixel_col <= obstacle_x + 40 AND
+        pixel_row <= gap_y - gap_size/2) THEN
+        obstacle_on <= '1';
 
-    -- circle centered at (obstacle_x+20, top_height/2)
-    IF ((pixel_row - (top_height/2)) * (pixel_row - (top_height/2)) +
-        (pixel_col - (obstacle_x+20)) * (pixel_col - (obstacle_x+20))) < (top_height/2)*(top_height/2) THEN
+    -- BOTTOM PIPE
+    ELSIF (pixel_col >= obstacle_x AND pixel_col <= obstacle_x + 40 AND
+           pixel_row >= gap_y + gap_size/2) THEN
         obstacle_on <= '1';
     END IF;
-    
-    ELSIF (pixel_col >= obstacle_x AND pixel_col <= obstacle_x + 40) THEN
-
-    -- triangle growing downward
-    IF pixel_row >= bottom_start AND
-       pixel_row <= bottom_start + (pixel_col - obstacle_x) THEN
-        obstacle_on <= '1';
-    END IF;
-
-END IF;
 END PROCESS;
 
 
 
-mball : PROCESS
+    mball : PROCESS
 BEGIN
     WAIT UNTIL rising_edge(v_sync);
 
-    ------------------------------------------------------------------
-    -- START GAME / RESET
-    ------------------------------------------------------------------
+    -- START GAME
     IF (serve = '1') AND (game_on = '0') THEN
         game_on <= '1';
 
@@ -190,21 +174,13 @@ BEGIN
         velocity_y <= 0;
 
         -- reset obstacle
-        obstacle_x   <= 800;
-        top_height   <= 200;
-        bottom_start <= 400;
+        obstacle_x <= 800;
+        gap_y      <= 300;
 
-        -- reset coin
-        coin_x <= 600;
-        coin_y <= 300;
-        coin_active <= '1';
+        -- reset counters
+        hit_count  <= 0;
+        coin_count <= 0;
 
-        -- reset score
-        score <= 0;
-
-    ------------------------------------------------------------------
-    -- MAIN GAME LOOP
-    ------------------------------------------------------------------
     ELSIF game_on = '1' THEN
 
         ------------------------------------------------------------------
@@ -212,24 +188,19 @@ BEGIN
         ------------------------------------------------------------------
         obstacle_x <= obstacle_x - 5;
 
+        -- reset when off screen and award a coin
         IF obstacle_x < 0 THEN
             obstacle_x <= 800;
+            coin_count <= coin_count + 1;
 
-            -- new random-ish obstacle positions
-            top_height   <= (top_height + 97) mod 300 + 50;
-            bottom_start <= (bottom_start + 173) mod 300 + 300;
+            -- pseudo-random gap
+            gap_y <= (gap_y + 137) mod 500 + 50;
         END IF;
 
         ------------------------------------------------------------------
-        -- COIN MOVEMENT
+        -- SCORE: increment every frame while alive
         ------------------------------------------------------------------
-        coin_x <= coin_x - 5;
-
-        IF coin_x < 0 THEN
-            coin_x <= 800;
-            coin_y <= (coin_y + 211) mod 500 + 50;
-            coin_active <= '1';
-        END IF;
+        hit_count <= hit_count + 1;
 
         ------------------------------------------------------------------
         -- PLAYER PHYSICS
@@ -257,50 +228,17 @@ BEGIN
         END IF;
 
         ------------------------------------------------------------------
-        -- COLLISION WITH OBSTACLES
+        -- COLLISION
         ------------------------------------------------------------------
 
         IF (200 + 32 >= obstacle_x AND 200 <= obstacle_x + 40) THEN
-
-            -- hit top obstacle
-            IF player_y <= top_height THEN
-                game_on <= '0';
-
-            -- hit bottom obstacle
-            ELSIF player_y + 32 >= bottom_start THEN
-                game_on <= '0';
-            END IF;
-
-        END IF;
-
-        ------------------------------------------------------------------
-        -- COIN COLLECTION
-        ------------------------------------------------------------------
-
-        IF coin_active = '1' THEN
-            IF (200 + 32 >= coin_x AND 200 <= coin_x + 10 AND
-                player_y + 32 >= coin_y AND player_y <= coin_y + 10) THEN
-
-                coin_active <= '0';
-                score <= score + 1;
+            IF (player_y <= gap_y - gap_size/2 OR
+                player_y + 32 >= gap_y + gap_size/2) THEN
+                game_on <= '0';  -- game over
             END IF;
         END IF;
 
     END IF;
 
 END PROCESS;
-
-
-coindraw : PROCESS(pixel_row, pixel_col, coin_x, coin_y, coin_active)
-BEGIN
-    coin_on <= '0';
-
-    IF coin_active = '1' THEN
-        IF ((pixel_row - coin_y)*(pixel_row - coin_y) +
-            (pixel_col - coin_x)*(pixel_col - coin_x)) < 100 THEN
-            coin_on <= '1';
-        END IF;
-    END IF;
-END PROCESS;
-
 END Behavioral;
