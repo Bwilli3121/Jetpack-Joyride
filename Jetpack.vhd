@@ -27,22 +27,22 @@ ARCHITECTURE Behavioral OF pong IS
     SIGNAL S_pixel_row, S_pixel_col : STD_LOGIC_VECTOR (10 DOWNTO 0);
     SIGNAL batpos : STD_LOGIC_VECTOR (10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(400, 11);
     SIGNAL count : STD_LOGIC_VECTOR (20 DOWNTO 0) := (OTHERS => '0');
+    SIGNAL display : STD_LOGIC_VECTOR (15 DOWNTO 0);
     SIGNAL led_mpx : STD_LOGIC_VECTOR (2 DOWNTO 0);
     SIGNAL hits_value : STD_LOGIC_VECTOR (15 DOWNTO 0);
-    SIGNAL coin_value : STD_LOGIC_VECTOR (15 DOWNTO 0);
 
     COMPONENT bat_n_ball IS
         PORT (
             v_sync : IN STD_LOGIC;
             pixel_row : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
             pixel_col : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+            --bat_y : IN STD_LOGIC_VECTOR (10 DOWNTO 0);
             bat_x : IN STD_LOGIC_VECTOR (10 DOWNTO 0);
             serve : IN STD_LOGIC;
             red : OUT STD_LOGIC;
             green : OUT STD_LOGIC;
             blue : OUT STD_LOGIC;
-            hits : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
-            coins : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+            hits : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
         );
     END COMPONENT;
 
@@ -71,11 +71,10 @@ ARCHITECTURE Behavioral OF pong IS
 
     COMPONENT leddec16 IS
         PORT (
-            dig   : IN STD_LOGIC_VECTOR (2 DOWNTO 0);
-            score : IN STD_LOGIC_VECTOR (11 DOWNTO 0);
-            coins : IN STD_LOGIC_VECTOR (11 DOWNTO 0);
+            dig : IN STD_LOGIC_VECTOR (2 DOWNTO 0);
+            data : IN STD_LOGIC_VECTOR (15 DOWNTO 0);
             anode : OUT STD_LOGIC_VECTOR (7 DOWNTO 0);
-            seg   : OUT STD_LOGIC_VECTOR (6 DOWNTO 0)
+            seg : OUT STD_LOGIC_VECTOR (6 DOWNTO 0)
         );
     END COMPONENT; 
     
@@ -95,6 +94,7 @@ BEGIN
     END PROCESS;
 
     led_mpx <= count(19 DOWNTO 17);
+    display <= hits_value;
     LED <= hits_value;
 
     add_bb : bat_n_ball
@@ -107,8 +107,7 @@ BEGIN
         red => S_red, 
         green => S_green, 
         blue => S_blue,
-        hits => hits_value,
-        coins => coin_value
+        hits => hits_value
     );
     
     vga_driver : vga_sync
@@ -137,8 +136,7 @@ BEGIN
     led1 : leddec16
     PORT MAP(
         dig => led_mpx,
-        score => hits_value(11 DOWNTO 0),
-        coins => coin_value(11 DOWNTO 0),
+        data => display, 
         anode => SEG7_anode,
         seg => SEG7_seg
     );
