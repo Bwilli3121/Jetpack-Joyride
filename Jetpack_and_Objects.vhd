@@ -13,16 +13,22 @@ ENTITY bat_n_ball IS
         red       : OUT STD_LOGIC;
         green     : OUT STD_LOGIC;
         blue      : OUT STD_LOGIC;
-        hits      : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
-        coins     : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+        hits      : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
     );
 END bat_n_ball;
 
 ARCHITECTURE Behavioral OF bat_n_ball IS
 SIGNAL obstacle_x : INTEGER := 800;
-SIGNAL gap_y : INTEGER := 300;
+--SIGNAL gap_y : INTEGER := 300;
+SIGNAL top_height    : INTEGER := 200;
+SIGNAL bottom_start  : INTEGER := 400;
 CONSTANT gap_size : INTEGER := 150;
 SIGNAL obstacle_on : STD_LOGIC;
+SIGNAL coin_x : INTEGER := 600;
+SIGNAL coin_y : INTEGER := 300;
+SIGNAL coin_on : STD_LOGIC;
+SIGNAL coin_active : STD_LOGIC := '1';
+SIGNAL score : INTEGER := 0;
 
     CONSTANT bsize        : INTEGER := 8;
     CONSTANT bat_h        : INTEGER := 3;
@@ -37,6 +43,7 @@ SIGNAL obstacle_on : STD_LOGIC;
     SIGNAL ball_x : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(400, 11);
     SIGNAL ball_y : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(300, 11);
 
+    --CONSTANT bat_y : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(500, 11);
     SIGNAL player_y : INTEGER := 300;
     SIGNAL velocity_y : INTEGER := 0;
 
@@ -44,17 +51,15 @@ SIGNAL obstacle_on : STD_LOGIC;
     SIGNAL ball_y_motion : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(base_speed, 11);
 
     SIGNAL hit_count   : INTEGER := 0;
-    SIGNAL coin_count  : INTEGER := 0;
     SIGNAL bat_w_cur   : INTEGER := bat_w_start;
     SIGNAL hit_latched : STD_LOGIC := '0';
 
 BEGIN
-red   <= NOT (bat_on OR obstacle_on);
-green <= NOT obstacle_on;
+red   <= NOT (bat_on OR obstacle_on OR coin_on);
+green <= NOT (obstacle_on OR coin_on);
 blue  <= NOT bat_on;
 
-    hits  <= CONV_STD_LOGIC_VECTOR(hit_count, 16);
-    coins <= CONV_STD_LOGIC_VECTOR(coin_count, 16);
+hits <= CONV_STD_LOGIC_VECTOR(score, 16);
 
     balldraw : PROCESS (ball_x, ball_y, pixel_row, pixel_col, game_on)
         VARIABLE vx, vy : STD_LOGIC_VECTOR (10 DOWNTO 0);
@@ -123,6 +128,7 @@ batdraw : PROCESS (bat_x, pixel_row, pixel_col)
     variable idx : INTEGER;
 
 BEGIN
+    --bx := CONV_INTEGER(bat_x);
     bx := 200;  -- fixed x position
     by := player_y;
 
@@ -143,29 +149,45 @@ BEGIN
 END PROCESS;
 
 
-obstacledraw : PROCESS(pixel_row, pixel_col, obstacle_x, gap_y)
+obstacledraw : PROCESS(pixel_row, pixel_col, obstacle_x, top_height, bottom_start)
+    VARIABLE pr : INTEGER;
+    VARIABLE pc : INTEGER;
+    VARIABLE dx : INTEGER;
+    VARIABLE dy : INTEGER;
 BEGIN
+    pr := CONV_INTEGER(pixel_row);
+    pc := CONV_INTEGER(pixel_col);
+
     obstacle_on <= '0';
 
-    -- TOP PIPE
-    IF (pixel_col >= obstacle_x AND pixel_col <= obstacle_x + 40 AND
-        pixel_row <= gap_y - gap_size/2) THEN
+    -- TOP CIRCLE OBSTACLE
+    -- center = obstacle_x + 30, top_height
+    dx := pc - (obstacle_x + 30);
+    dy := pr - top_height;
+
+    IF (dx*dx + dy*dy <= 35*35) THEN
         obstacle_on <= '1';
 
-    -- BOTTOM PIPE
-    ELSIF (pixel_col >= obstacle_x AND pixel_col <= obstacle_x + 40 AND
-           pixel_row >= gap_y + gap_size/2) THEN
+    -- BOTTOM RECTANGLE OBSTACLE
+    ELSIF (pc >= obstacle_x AND pc <= obstacle_x + 60 AND
+           pr >= bottom_start AND pr <= bottom_start + 160) THEN
         obstacle_on <= '1';
     END IF;
+
 END PROCESS;
 
 
-
-    mball : PROCESS
+mball : PROCESS
+    VARIABLE px : INTEGER;
+    VARIABLE py : INTEGER;
+    VARIABLE dx : INTEGER;
+    VARIABLE dy : INTEGER;
 BEGIN
     WAIT UNTIL rising_edge(v_sync);
 
-    -- START GAME
+    ------------------------------------------------------------------
+    -- START GAME / RESET
+    ------------------------------------------------------------------
     IF (serve = '1') AND (game_on = '0') THEN
         game_on <= '1';
 
@@ -174,13 +196,21 @@ BEGIN
         velocity_y <= 0;
 
         -- reset obstacle
-        obstacle_x <= 800;
-        gap_y      <= 300;
+        obstacle_x   <= 800;
+        top_height   <= 200;
+        bottom_start <= 400;
 
-        -- reset counters
-        hit_count  <= 0;
-        coin_count <= 0;
+        -- reset coin
+        coin_x <= 600;
+        coin_y <= 300;
+        coin_active <= '1';
 
+        -- reset score
+        score <= 0;
+
+    ------------------------------------------------------------------
+    -- MAIN GAME LOOP
+    ------------------------------------------------------------------
     ELSIF game_on = '1' THEN
 
         ------------------------------------------------------------------
@@ -188,57 +218,105 @@ BEGIN
         ------------------------------------------------------------------
         obstacle_x <= obstacle_x - 5;
 
-        -- reset when off screen and award a coin
         IF obstacle_x < 0 THEN
             obstacle_x <= 800;
-            coin_count <= coin_count + 1;
 
-            -- pseudo-random gap
-            gap_y <= (gap_y + 137) mod 500 + 50;
+            top_height   <= (top_height + 97) mod 300 + 50;
+            bottom_start <= (bottom_start + 173) mod 300 + 300;
         END IF;
 
         ------------------------------------------------------------------
-        -- SCORE: increment every frame while alive
+        -- COIN MOVEMENT
         ------------------------------------------------------------------
-        hit_count <= hit_count + 1;
+        coin_x <= coin_x - 5;
+
+        IF coin_x < 0 THEN
+            coin_x <= 800;
+            coin_y <= (coin_y + 211) mod 500 + 50;
+            coin_active <= '1';
+        END IF;
 
         ------------------------------------------------------------------
         -- PLAYER PHYSICS
         ------------------------------------------------------------------
-
-        -- gravity
         velocity_y <= velocity_y + 1;
 
-        -- jump
         IF serve = '1' THEN
             velocity_y <= -10;
         END IF;
 
-        -- update position
         player_y <= player_y + velocity_y;
 
-        -- keep player on screen
         IF player_y < 0 THEN
             player_y <= 0;
             velocity_y <= 0;
-
         ELSIF player_y > 580 THEN
             player_y <= 580;
             velocity_y <= 0;
         END IF;
 
         ------------------------------------------------------------------
-        -- COLLISION
+        -- COLLISION WITH OBSTACLES (FIXED)
         ------------------------------------------------------------------
 
-        IF (200 + 32 >= obstacle_x AND 200 <= obstacle_x + 40) THEN
-            IF (player_y <= gap_y - gap_size/2 OR
-                player_y + 32 >= gap_y + gap_size/2) THEN
-                game_on <= '0';  -- game over
+        -- player center (sprite ~32x32 at x=200)
+        px := 200 + 16;
+        py := player_y + 16;
+
+        IF (px >= obstacle_x AND px <= obstacle_x + 60) THEN
+
+            -- TOP CIRCLE COLLISION
+            dx := px - (obstacle_x + 30);
+            dy := py - top_height;
+
+            IF (dx*dx + dy*dy <= 35*35) THEN
+                game_on <= '0';
+            END IF;
+
+            -- BOTTOM RECTANGLE COLLISION
+            IF (py >= bottom_start) THEN
+                game_on <= '0';
+            END IF;
+
+        END IF;
+
+        ------------------------------------------------------------------
+        -- COIN COLLECTION
+        ------------------------------------------------------------------
+
+        IF coin_active = '1' THEN
+            IF (px >= coin_x - 8 AND px <= coin_x + 8 AND
+                py >= coin_y - 8 AND py <= coin_y + 8) THEN
+
+                coin_active <= '0';
+                score <= score + 1;
             END IF;
         END IF;
 
     END IF;
 
 END PROCESS;
+
+coindraw : PROCESS(pixel_row, pixel_col, coin_x, coin_y, coin_active)
+    VARIABLE pr : INTEGER;
+    VARIABLE pc : INTEGER;
+    VARIABLE dx : INTEGER;
+    VARIABLE dy : INTEGER;
+BEGIN
+    pr := CONV_INTEGER(pixel_row);
+    pc := CONV_INTEGER(pixel_col);
+
+    coin_on <= '0';
+
+    IF coin_active = '1' THEN
+        dx := pc - coin_x;
+        dy := pr - coin_y;
+
+        IF (dx*dx + dy*dy <= 8*8) THEN
+            coin_on <= '1';
+        END IF;
+    END IF;
+
+END PROCESS;
+
 END Behavioral;
