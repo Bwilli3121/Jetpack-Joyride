@@ -69,14 +69,6 @@ ARCHITECTURE Behavioral OF pong IS
         );
     END COMPONENT;
 
-    COMPONENT leddec16 IS
-        PORT (
-            dig : IN STD_LOGIC_VECTOR (2 DOWNTO 0);
-            data : IN STD_LOGIC_VECTOR (15 DOWNTO 0);
-            anode : OUT STD_LOGIC_VECTOR (7 DOWNTO 0);
-            seg : OUT STD_LOGIC_VECTOR (6 DOWNTO 0)
-        );
-    END COMPONENT; 
     
 BEGIN
 
@@ -133,12 +125,6 @@ BEGIN
         clk_out1 => pxl_clk
     );
 
-    led1 : leddec16
-    PORT MAP(
-        dig => led_mpx,
-        data => display, 
-        anode => SEG7_anode,
-        seg => SEG7_seg
-    );
+   
 
 END Behavioral;
