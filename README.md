@@ -22,7 +22,7 @@ Our Project recreates the mobile phone game Jetpack Joyride, using a sprite of a
 -VGA to HDMI Adapter
 -HDMI cable
 -TV or monitor with HDMI input
-##Software Required
+## Software Required
 -AMD Vivado (2025.2)
 
 ---
