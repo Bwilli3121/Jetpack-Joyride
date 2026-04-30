@@ -24,11 +24,17 @@ SIGNAL top_height    : INTEGER := 200;
 SIGNAL bottom_start  : INTEGER := 400;
 CONSTANT gap_size : INTEGER := 150;
 SIGNAL obstacle_on : STD_LOGIC;
+SIGNAL obstacle_type : INTEGER := 0;  -- 0=circle, 1=rectangle, 2=triangle
+
+
 SIGNAL coin_x : INTEGER := 600;
 SIGNAL coin_y : INTEGER := 300;
 SIGNAL coin_on : STD_LOGIC;
 SIGNAL coin_active : STD_LOGIC := '1';
 SIGNAL score : INTEGER := 0;
+SIGNAL coin2_x : INTEGER := 700;
+SIGNAL coin2_y : INTEGER := 350;
+SIGNAL coin2_active : STD_LOGIC := '1';
 
     CONSTANT bsize        : INTEGER := 8;
     CONSTANT bat_h        : INTEGER := 3;
@@ -53,13 +59,47 @@ SIGNAL score : INTEGER := 0;
     SIGNAL hit_count   : INTEGER := 0;
     SIGNAL bat_w_cur   : INTEGER := bat_w_start;
     SIGNAL hit_latched : STD_LOGIC := '0';
+    
+    SIGNAL particle_on : STD_LOGIC;
+    SIGNAL particle_y : INTEGER :=0;
 
 BEGIN
-red   <= NOT (bat_on OR obstacle_on OR coin_on);
-green <= NOT (obstacle_on OR coin_on);
-blue  <= NOT bat_on;
 
 hits <= CONV_STD_LOGIC_VECTOR(score, 16);
+--obstacle_type <= (obstacle_type + 1) mod 3;
+
+colordraw : PROCESS(bat_on, obstacle_on, coin_on, particle_on)
+BEGIN
+    -- background
+    red   <= '1';
+    green <= '1';
+    blue  <= '1';
+
+    -- PLAYER (red)
+    IF bat_on = '1' THEN
+        red   <= '0';
+        green <= '1';
+        blue  <= '1';
+
+    -- COINS (yellow)
+    ELSIF coin_on = '1' THEN
+        red   <= '0';
+        green <= '0';
+        blue  <= '1';
+
+    -- OBSTACLES (blue)
+    ELSIF obstacle_on = '1' THEN
+        red   <= '1';
+        green <= '1';
+        blue  <= '0';
+
+    -- PARTICLES (cyan)
+    ELSIF particle_on = '1' THEN
+        red   <= '1';
+        green <= '0';
+        blue  <= '0';
+    END IF;
+END PROCESS;
 
     balldraw : PROCESS (ball_x, ball_y, pixel_row, pixel_col, game_on)
         VARIABLE vx, vy : STD_LOGIC_VECTOR (10 DOWNTO 0);
@@ -149,7 +189,7 @@ BEGIN
 END PROCESS;
 
 
-obstacledraw : PROCESS(pixel_row, pixel_col, obstacle_x, top_height, bottom_start)
+obstacledraw : PROCESS(pixel_row, pixel_col, obstacle_x, top_height, bottom_start, obstacle_type)
     VARIABLE pr : INTEGER;
     VARIABLE pc : INTEGER;
     VARIABLE dx : INTEGER;
@@ -160,20 +200,31 @@ BEGIN
 
     obstacle_on <= '0';
 
-    -- TOP CIRCLE OBSTACLE
-    -- center = obstacle_x + 30, top_height
-    dx := pc - (obstacle_x + 30);
-    dy := pr - top_height;
+    IF obstacle_type = 0 THEN
+        -- BIG circle
+        dx := pc - (obstacle_x + 45);
+        dy := pr - top_height;
 
-    IF (dx*dx + dy*dy <= 35*35) THEN
-        obstacle_on <= '1';
+        IF (dx*dx + dy*dy <= 60*60) THEN
+            obstacle_on <= '1';
+        END IF;
 
-    -- BOTTOM RECTANGLE OBSTACLE
-    ELSIF (pc >= obstacle_x AND pc <= obstacle_x + 60 AND
-           pr >= bottom_start AND pr <= bottom_start + 160) THEN
-        obstacle_on <= '1';
+    ELSIF obstacle_type = 1 THEN
+        -- BIG rectangle
+        IF (pc >= obstacle_x AND pc <= obstacle_x + 80 AND
+            pr >= bottom_start AND pr <= bottom_start + 200) THEN
+            obstacle_on <= '1';
+        END IF;
+
+    ELSE
+        -- medium circle
+        dx := pc - (obstacle_x + 40);
+        dy := pr - bottom_start;
+
+        IF (dx*dx + dy*dy <= 45*45) THEN
+            obstacle_on <= '1';
+        END IF;
     END IF;
-
 END PROCESS;
 
 
@@ -191,21 +242,21 @@ BEGIN
     IF (serve = '1') AND (game_on = '0') THEN
         game_on <= '1';
 
-        -- reset player
         player_y   <= 300;
         velocity_y <= 0;
 
-        -- reset obstacle
         obstacle_x   <= 800;
         top_height   <= 200;
         bottom_start <= 400;
 
-        -- reset coin
         coin_x <= 600;
         coin_y <= 300;
         coin_active <= '1';
 
-        -- reset score
+        coin2_x <= 700;
+        coin2_y <= 350;
+        coin2_active <= '1';
+
         score <= 0;
 
     ------------------------------------------------------------------
@@ -221,8 +272,10 @@ BEGIN
         IF obstacle_x < 0 THEN
             obstacle_x <= 800;
 
-            top_height   <= (top_height + 97) mod 300 + 50;
-            bottom_start <= (bottom_start + 173) mod 300 + 300;
+            top_height   <= (top_height + 97) mod 300 + 80;
+            bottom_start <= (bottom_start + 173) mod 300 + 250;
+
+            obstacle_type <= (obstacle_type + 1) mod 3;
         END IF;
 
         ------------------------------------------------------------------
@@ -234,6 +287,14 @@ BEGIN
             coin_x <= 800;
             coin_y <= (coin_y + 211) mod 500 + 50;
             coin_active <= '1';
+        END IF;
+
+        coin2_x <= coin2_x - 5;
+
+        IF coin2_x < 0 THEN
+            coin2_x <= 800;
+            coin2_y <= (coin2_y + 157) mod 500 + 50;
+            coin2_active <= '1';
         END IF;
 
         ------------------------------------------------------------------
@@ -256,39 +317,63 @@ BEGIN
         END IF;
 
         ------------------------------------------------------------------
-        -- COLLISION WITH OBSTACLES (FIXED)
+        -- COMPUTE PLAYER CENTER (CRITICAL FIX)
         ------------------------------------------------------------------
-
-        -- player center (sprite ~32x32 at x=200)
         px := 200 + 16;
         py := player_y + 16;
 
-        IF (px >= obstacle_x AND px <= obstacle_x + 60) THEN
+        ------------------------------------------------------------------
+        -- OBSTACLE COLLISION
+        ------------------------------------------------------------------
+        IF (px >= obstacle_x AND px <= obstacle_x + 90) THEN
 
-            -- TOP CIRCLE COLLISION
-            dx := px - (obstacle_x + 30);
-            dy := py - top_height;
+            IF obstacle_type = 0 THEN
+                dx := px - (obstacle_x + 45);
+                dy := py - top_height;
 
-            IF (dx*dx + dy*dy <= 35*35) THEN
-                game_on <= '0';
-            END IF;
+                IF (dx*dx + dy*dy <= 60*60) THEN
+                    game_on <= '0';
+                END IF;
 
-            -- BOTTOM RECTANGLE COLLISION
-            IF (py >= bottom_start) THEN
-                game_on <= '0';
+            ELSIF obstacle_type = 1 THEN
+                IF (px >= obstacle_x AND px <= obstacle_x + 80 AND
+                    py >= bottom_start AND py <= bottom_start + 200) THEN
+                    game_on <= '0';
+                END IF;
+
+            ELSE
+                dx := px - (obstacle_x + 40);
+                dy := py - bottom_start;
+
+                IF (dx*dx + dy*dy <= 45*45) THEN
+                    game_on <= '0';
+                END IF;
             END IF;
 
         END IF;
 
         ------------------------------------------------------------------
-        -- COIN COLLECTION
+        -- COIN COLLISION
         ------------------------------------------------------------------
 
+        -- coin 1
         IF coin_active = '1' THEN
-            IF (px >= coin_x - 8 AND px <= coin_x + 8 AND
-                py >= coin_y - 8 AND py <= coin_y + 8) THEN
+            dx := px - coin_x;
+            dy := py - coin_y;
 
+            IF (dx*dx + dy*dy <= 18*18) THEN
                 coin_active <= '0';
+                score <= score + 1;
+            END IF;
+        END IF;
+
+        -- coin 2
+        IF coin2_active = '1' THEN
+            dx := px - coin2_x;
+            dy := py - coin2_y;
+
+            IF (dx*dx + dy*dy <= 18*18) THEN
+                coin2_active <= '0';
                 score <= score + 1;
             END IF;
         END IF;
@@ -297,7 +382,25 @@ BEGIN
 
 END PROCESS;
 
-coindraw : PROCESS(pixel_row, pixel_col, coin_x, coin_y, coin_active)
+particledraw : PROCESS(pixel_row, pixel_col, player_y)
+    VARIABLE pr : INTEGER;
+    VARIABLE pc : INTEGER;
+BEGIN
+    pr := CONV_INTEGER(pixel_row);
+    pc := CONV_INTEGER(pixel_col);
+
+    particle_on <= '0';
+
+    -- random-ish flicker using LSB of position
+    IF ((pr mod 3) = 0) THEN
+        IF (pc >= 200 AND pc <= 210 AND
+            pr >= player_y + 32 AND pr <= player_y + 50) THEN
+            particle_on <= '1';
+        END IF;
+    END IF;
+END PROCESS;
+
+coindraw : PROCESS(pixel_row, pixel_col, coin_x, coin_y, coin_active, coin2_x, coin2_y, coin2_active)
     VARIABLE pr : INTEGER;
     VARIABLE pc : INTEGER;
     VARIABLE dx : INTEGER;
@@ -308,15 +411,25 @@ BEGIN
 
     coin_on <= '0';
 
+    -- coin 1
     IF coin_active = '1' THEN
         dx := pc - coin_x;
         dy := pr - coin_y;
 
-        IF (dx*dx + dy*dy <= 8*8) THEN
+        IF (dx*dx + dy*dy <= 14*14) THEN
             coin_on <= '1';
         END IF;
     END IF;
 
+    -- coin 2
+    IF coin2_active = '1' THEN
+        dx := pc - coin2_x;
+        dy := pr - coin2_y;
+
+        IF (dx*dx + dy*dy <= 14*14) THEN
+            coin_on <= '1';
+        END IF;
+    END IF;
 END PROCESS;
 
 END Behavioral;
