@@ -9,21 +9,21 @@ Our Project recreates the mobile phone game Jetpack Joyride, using a sprite of a
 
 ---
 ## Hardware Required
--Digilent Nexys A7-100T FPGA Board
--Micro USB cable (connects to computer)
--VGA to HDMI Adapter
--HDMI cable
--TV or monitor with HDMI input
+- Digilent Nexys A7-100T FPGA Board
+- Micro USB cable (connects to computer)
+- VGA to HDMI Adapter
+- HDMI cable
+- TV or monitor with HDMI input
 ## Software Required
--AMD Vivado (2025.2)
+- AMD Vivado (2025.2)
 
 ---
 ## How to Run on Vivado 
--Open Vivado and create a new project
--Use the provided files when asked for imported files
--Add the .xdc file in constraints
--Import file and slect Nexys A7-100T in boards section
--When the project opens, Run Sythesis, Run Implementation, Generate Bitstream, then open Hardware Manager to open target, and finally program device
+- Open Vivado and create a new project
+- Use the provided files when asked for imported files
+- Add the .xdc file in constraints
+- Import file and slect Nexys A7-100T in boards section
+- When the project opens, Run Sythesis, Run Implementation, Generate Bitstream, then open Hardware Manager to open target, and finally program device
 
 ---
 ## Video Demonstration
