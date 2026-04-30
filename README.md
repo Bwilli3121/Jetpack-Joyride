@@ -16,8 +16,14 @@ Our Project recreates the mobile phone game Jetpack Joyride, using a sprite of a
 
 
 ---
-## Hardware required
-
+## Hardware Required
+-Digilent Nexys A7-100T FPGA Board
+-Micro USB cable (connects to computer)
+-VGA to HDMI Adapter
+-HDMI cable
+-TV or monitor with HDMI input
+##Software Required
+-AMD Vivado (2025.2)
 
 ---
 ## Modules & FSMs
@@ -25,3 +31,7 @@ Our Project recreates the mobile phone game Jetpack Joyride, using a sprite of a
 
 ---
 ## Important Code
+
+
+---
+"We pledge our honor that we have abided by the Stevens Honor System" - Alison Dutton, Andrej Rinkovsky, Brennan Williams 
