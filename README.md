@@ -31,7 +31,26 @@ Our Project recreates the mobile phone game Jetpack Joyride, using a sprite of a
 
 ---
 ## Inputs and Outputs
+For Jetpack.vhd:
+'ENTITY pong IS
+PORT(
+    clk_in      : IN  STD_LOGIC;
+    btn0        : IN  STD_LOGIC;
+    btnl        : IN  STD_LOGIC;
+    btnr        : IN  STD_LOGIC;
 
+    VGA_red     : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+    VGA_green   : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+    VGA_blue    : OUT STD_LOGIC_VECTOR(3 DOWNTO 0);
+    VGA_hsync   : OUT STD_LOGIC;
+    VGA_vsync   : OUT STD_LOGIC;
+
+    SEG7_anode  : OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
+    SEG7_seg    : OUT STD_LOGIC_VECTOR (6 DOWNTO 0);
+
+    LED         : OUT STD_LOGIC_VECTOR (15 DOWNTO 0)
+);
+END pong;'
 
 
 ---
