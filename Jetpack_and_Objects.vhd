@@ -62,44 +62,52 @@ SIGNAL coin2_active : STD_LOGIC := '1';
     
     SIGNAL particle_on : STD_LOGIC;
     SIGNAL particle_y : INTEGER :=0;
+    SIGNAL particle_offset : INTEGER := 0;
+    
+    SIGNAL obstacle2_x : INTEGER := 1200;
+SIGNAL obstacle2_type : INTEGER := 1;
+SIGNAL obstacle2_top : INTEGER := 150;
+SIGNAL obstacle2_bot : INTEGER := 350;
 
 BEGIN
 
 hits <= CONV_STD_LOGIC_VECTOR(score, 16);
+
 --obstacle_type <= (obstacle_type + 1) mod 3;
 
 colordraw : PROCESS(bat_on, obstacle_on, coin_on, particle_on)
 BEGIN
-    -- background
+    -- background = white
     red   <= '1';
     green <= '1';
     blue  <= '1';
 
-    -- PLAYER (red)
+    -- player = red
     IF bat_on = '1' THEN
-        red   <= '0';
-        green <= '1';
-        blue  <= '1';
-
-    -- COINS (yellow)
-    ELSIF coin_on = '1' THEN
-        red   <= '0';
-        green <= '0';
-        blue  <= '1';
-
-    -- OBSTACLES (blue)
-    ELSIF obstacle_on = '1' THEN
         red   <= '1';
-        green <= '1';
+        green <= '0';
         blue  <= '0';
 
-    -- PARTICLES (cyan)
+    -- particles = red
     ELSIF particle_on = '1' THEN
         red   <= '1';
         green <= '0';
         blue  <= '0';
+
+    -- coins = yellow
+    ELSIF coin_on = '1' THEN
+        red   <= '1';
+        green <= '1';
+        blue  <= '0';
+
+    -- obstacles = blue
+    ELSIF obstacle_on = '1' THEN
+        red   <= '0';
+        green <= '0';
+        blue  <= '1';
     END IF;
 END PROCESS;
+
 
     balldraw : PROCESS (ball_x, ball_y, pixel_row, pixel_col, game_on)
         VARIABLE vx, vy : STD_LOGIC_VECTOR (10 DOWNTO 0);
@@ -188,8 +196,9 @@ BEGIN
     END IF;
 END PROCESS;
 
-
-obstacledraw : PROCESS(pixel_row, pixel_col, obstacle_x, top_height, bottom_start, obstacle_type)
+obstacledraw : PROCESS(pixel_row, pixel_col, 
+                       obstacle_x, top_height, bottom_start, obstacle_type,
+                       obstacle2_x, obstacle2_top, obstacle2_bot, obstacle2_type)
     VARIABLE pr : INTEGER;
     VARIABLE pc : INTEGER;
     VARIABLE dx : INTEGER;
@@ -200,6 +209,9 @@ BEGIN
 
     obstacle_on <= '0';
 
+    ------------------------------------------------------------------
+    -- OBSTACLE 1
+    ------------------------------------------------------------------
     IF obstacle_type = 0 THEN
         -- BIG circle
         dx := pc - (obstacle_x + 45);
@@ -225,8 +237,34 @@ BEGIN
             obstacle_on <= '1';
         END IF;
     END IF;
-END PROCESS;
 
+    ------------------------------------------------------------------
+    -- OBSTACLE 2 (SEPARATE, NOT INSIDE ELSE)
+    ------------------------------------------------------------------
+    IF obstacle2_type = 0 THEN
+        dx := pc - (obstacle2_x + 45);
+        dy := pr - obstacle2_top;
+
+        IF (dx*dx + dy*dy <= 60*60) THEN
+            obstacle_on <= '1';
+        END IF;
+
+    ELSIF obstacle2_type = 1 THEN
+        IF (pc >= obstacle2_x AND pc <= obstacle2_x + 80 AND
+            pr >= obstacle2_bot AND pr <= obstacle2_bot + 200) THEN
+            obstacle_on <= '1';
+        END IF;
+
+    ELSE
+        dx := pc - (obstacle2_x + 40);
+        dy := pr - obstacle2_bot;
+
+        IF (dx*dx + dy*dy <= 45*45) THEN
+            obstacle_on <= '1';
+        END IF;
+    END IF;
+
+END PROCESS;
 
 mball : PROCESS
     VARIABLE px : INTEGER;
@@ -316,12 +354,29 @@ BEGIN
             velocity_y <= 0;
         END IF;
 
+
         ------------------------------------------------------------------
         -- COMPUTE PLAYER CENTER (CRITICAL FIX)
         ------------------------------------------------------------------
         px := 200 + 16;
         py := player_y + 16;
+        
+        particle_offset <= particle_offset + 2;
 
+IF particle_offset > 20 THEN
+    particle_offset <= 0;
+END IF;
+
+obstacle2_x <= obstacle2_x - 5;
+
+IF obstacle2_x < 0 THEN
+    obstacle2_x <= 800;
+
+    obstacle2_top <= (obstacle2_top + 83) mod 300 + 80;
+    obstacle2_bot <= (obstacle2_bot + 151) mod 300 + 250;
+
+    obstacle2_type <= (obstacle2_type + 1) mod 3;
+END IF;
         ------------------------------------------------------------------
         -- OBSTACLE COLLISION
         ------------------------------------------------------------------
@@ -382,7 +437,7 @@ BEGIN
 
 END PROCESS;
 
-particledraw : PROCESS(pixel_row, pixel_col, player_y)
+particledraw : PROCESS(pixel_row, pixel_col, player_y, particle_offset)
     VARIABLE pr : INTEGER;
     VARIABLE pc : INTEGER;
 BEGIN
@@ -391,13 +446,17 @@ BEGIN
 
     particle_on <= '0';
 
-    -- random-ish flicker using LSB of position
-    IF ((pr mod 3) = 0) THEN
-        IF (pc >= 200 AND pc <= 210 AND
-            pr >= player_y + 32 AND pr <= player_y + 50) THEN
+    -- exhaust stream below player
+    IF (pc >= 200 AND pc <= 210 AND
+        pr >= player_y + 32 + particle_offset AND
+        pr <= player_y + 50 + particle_offset) THEN
+
+        -- flicker effect
+        IF (pr mod 2 = 0) THEN
             particle_on <= '1';
         END IF;
     END IF;
+
 END PROCESS;
 
 coindraw : PROCESS(pixel_row, pixel_col, coin_x, coin_y, coin_active, coin2_x, coin2_y, coin2_active)
