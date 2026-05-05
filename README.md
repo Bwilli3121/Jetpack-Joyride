@@ -32,7 +32,7 @@ Our Project recreates the mobile phone game Jetpack Joyride, using a sprite of a
 ---
 ## Inputs and Outputs
 For Jetpack.vhd:
-'ENTITY pong IS
+ENTITY pong IS
 PORT(
     clk_in      : IN  STD_LOGIC;
     btn0        : IN  STD_LOGIC;
@@ -50,11 +50,11 @@ PORT(
 
     LED         : OUT STD_LOGIC_VECTOR (15 DOWNTO 0)
 );
-END pong; ' 
+END pong;  
 
 For Jetpack_and_objects.vhd:
 
-'ENTITY bat_n_ball IS
+ENTITY bat_n_ball IS
 PORT(
     v_sync      : IN  std_logic;
     pixel_row   : IN  std_logic_vector(9 DOWNTO 0);
@@ -68,7 +68,7 @@ PORT(
 
     hits        : OUT std_logic_vector(15 DOWNTO 0)
 );
-END bat_n_ball; '
+END bat_n_ball; 
 
 
 ---
