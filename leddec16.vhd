@@ -54,20 +54,14 @@ BEGIN
 
     -- Digit mux: select one 4-bit BCD nibble based on dig
     -- dig 0-3 = right 4 digits (score), dig 4-7 = left 4 digits (coins)
-    PROCESS (dig, bcd_all)
-    BEGIN
-        CASE dig IS
-            WHEN "000" => anode <= "11111110"; digit <= bcd_all(3  DOWNTO 0);   -- score ones
-            WHEN "001" => anode <= "11111101"; digit <= bcd_all(7  DOWNTO 4);   -- score tens
-            WHEN "010" => anode <= "11111011"; digit <= bcd_all(11 DOWNTO 8);   -- score hundreds
-            WHEN "011" => anode <= "11110111"; digit <= bcd_all(15 DOWNTO 12);  -- score thousands
-            WHEN "100" => anode <= "11101111"; digit <= bcd_all(19 DOWNTO 16);  -- coins ones
-            WHEN "101" => anode <= "11011111"; digit <= bcd_all(23 DOWNTO 20);  -- coins tens
-            WHEN "110" => anode <= "10111111"; digit <= bcd_all(27 DOWNTO 24);  -- coins hundreds
-            WHEN "111" => anode <= "01111111"; digit <= bcd_all(31 DOWNTO 28);  -- coins thousands
-            WHEN OTHERS => anode <= "11111111"; digit <= "0000";
-        END CASE;
-    END PROCESS;
+ PROCESS (bcd_all)
+BEGIN
+    -- only ONE digit ON (rightmost)
+    anode <= "11111110";  -- active low → enables 1 digit
+
+    -- show ones place of coins
+    digit <= bcd_all(19 DOWNTO 16);  
+END PROCESS;
 
     -- 7-segment decoder (active low: '0' = segment ON)
     --   segment order: seg(6)=g, seg(5)=f, ..., seg(0)=a
