@@ -50,7 +50,25 @@ PORT(
 
     LED         : OUT STD_LOGIC_VECTOR (15 DOWNTO 0)
 );
-END pong;'
+END pong; ' 
+
+For Jetpack_and_objects.vhd:
+
+'ENTITY bat_n_ball IS
+PORT(
+    v_sync      : IN  std_logic;
+    pixel_row   : IN  std_logic_vector(9 DOWNTO 0);
+    pixel_col   : IN  std_logic_vector(9 DOWNTO 0);
+    serve       : IN  std_logic;
+    bat_x       : IN  std_logic_vector(9 DOWNTO 0);
+
+    red         : OUT std_logic;
+    green       : OUT std_logic;
+    blue        : OUT std_logic;
+
+    hits        : OUT std_logic_vector(15 DOWNTO 0)
+);
+END bat_n_ball; '
 
 
 ---
