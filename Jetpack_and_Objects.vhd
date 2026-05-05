@@ -13,7 +13,8 @@ ENTITY bat_n_ball IS
         red       : OUT STD_LOGIC;
         green     : OUT STD_LOGIC;
         blue      : OUT STD_LOGIC;
-        hits      : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+        hits      : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+        distance  : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
     );
 END bat_n_ball;
 
@@ -32,6 +33,8 @@ SIGNAL coin_y : INTEGER := 300;
 SIGNAL coin_on : STD_LOGIC;
 SIGNAL coin_active : STD_LOGIC := '1';
 SIGNAL score : INTEGER := 0;
+SIGNAL distance_score : INTEGER := 0;
+SIGNAL distance_timer : INTEGER := 0; -- counts frames; 180 frames is about 3 seconds at 60 Hz
 SIGNAL coin2_x : INTEGER := 700;
 SIGNAL coin2_y : INTEGER := 350;
 SIGNAL coin2_active : STD_LOGIC := '1';
@@ -69,9 +72,16 @@ SIGNAL obstacle2_type : INTEGER := 1;
 SIGNAL obstacle2_top : INTEGER := 150;
 SIGNAL obstacle2_bot : INTEGER := 350;
 
+-- Third obstacle group, offset farther to the right so it enters later
+SIGNAL obstacle3_x    : INTEGER := 1600;
+SIGNAL obstacle3_type : INTEGER := 2;
+SIGNAL obstacle3_top  : INTEGER := 240;
+SIGNAL obstacle3_bot  : INTEGER := 430;
+
 BEGIN
 
 hits <= CONV_STD_LOGIC_VECTOR(score, 16);
+distance <= CONV_STD_LOGIC_VECTOR(distance_score, 16);
 
 --obstacle_type <= (obstacle_type + 1) mod 3;
 
@@ -198,7 +208,8 @@ END PROCESS;
 
 obstacledraw : PROCESS(pixel_row, pixel_col, 
                        obstacle_x, top_height, bottom_start, obstacle_type,
-                       obstacle2_x, obstacle2_top, obstacle2_bot, obstacle2_type)
+                       obstacle2_x, obstacle2_top, obstacle2_bot, obstacle2_type,
+                       obstacle3_x, obstacle3_top, obstacle3_bot, obstacle3_type)
     VARIABLE pr : INTEGER;
     VARIABLE pc : INTEGER;
     VARIABLE dx : INTEGER;
@@ -264,6 +275,32 @@ BEGIN
         END IF;
     END IF;
 
+    ------------------------------------------------------------------
+    -- OBSTACLE 3 (SEPARATE, NOT INSIDE ELSE)
+    ------------------------------------------------------------------
+    IF obstacle3_type = 0 THEN
+        dx := pc - (obstacle3_x + 45);
+        dy := pr - obstacle3_top;
+
+        IF (dx*dx + dy*dy <= 60*60) THEN
+            obstacle_on <= '1';
+        END IF;
+
+    ELSIF obstacle3_type = 1 THEN
+        IF (pc >= obstacle3_x AND pc <= obstacle3_x + 80 AND
+            pr >= obstacle3_bot AND pr <= obstacle3_bot + 200) THEN
+            obstacle_on <= '1';
+        END IF;
+
+    ELSE
+        dx := pc - (obstacle3_x + 40);
+        dy := pr - obstacle3_bot;
+
+        IF (dx*dx + dy*dy <= 45*45) THEN
+            obstacle_on <= '1';
+        END IF;
+    END IF;
+
 END PROCESS;
 
 mball : PROCESS
@@ -287,6 +324,16 @@ BEGIN
         top_height   <= 200;
         bottom_start <= 400;
 
+        obstacle2_x    <= 1200;
+        obstacle2_top  <= 150;
+        obstacle2_bot  <= 350;
+        obstacle2_type <= 1;
+
+        obstacle3_x    <= 1600;
+        obstacle3_top  <= 240;
+        obstacle3_bot  <= 430;
+        obstacle3_type <= 2;
+
         coin_x <= 600;
         coin_y <= 300;
         coin_active <= '1';
@@ -296,11 +343,27 @@ BEGIN
         coin2_active <= '1';
 
         score <= 0;
+        distance_score <= 0;
+        distance_timer <= 0;
 
     ------------------------------------------------------------------
     -- MAIN GAME LOOP
     ------------------------------------------------------------------
     ELSIF game_on = '1' THEN
+
+        ------------------------------------------------------------------
+        -- DISTANCE SCORE
+        -- v_sync is about 60 Hz, so 180 frames is about 3 seconds.
+        ------------------------------------------------------------------
+        IF distance_timer >= 179 THEN
+            distance_timer <= 0;
+
+            IF distance_score < 4095 THEN
+                distance_score <= distance_score + 1;
+            END IF;
+        ELSE
+            distance_timer <= distance_timer + 1;
+        END IF;
 
         ------------------------------------------------------------------
         -- OBSTACLE MOVEMENT
@@ -377,6 +440,17 @@ IF obstacle2_x < 0 THEN
 
     obstacle2_type <= (obstacle2_type + 1) mod 3;
 END IF;
+
+obstacle3_x <= obstacle3_x - 5;
+
+IF obstacle3_x < 0 THEN
+    obstacle3_x <= 800;
+
+    obstacle3_top <= (obstacle3_top + 127) mod 300 + 80;
+    obstacle3_bot <= (obstacle3_bot + 199) mod 300 + 250;
+
+    obstacle3_type <= (obstacle3_type + 1) mod 3;
+END IF;
         ------------------------------------------------------------------
         -- OBSTACLE COLLISION
         ------------------------------------------------------------------
@@ -399,6 +473,62 @@ END IF;
             ELSE
                 dx := px - (obstacle_x + 40);
                 dy := py - bottom_start;
+
+                IF (dx*dx + dy*dy <= 45*45) THEN
+                    game_on <= '0';
+                END IF;
+            END IF;
+
+        END IF;
+
+        -- Obstacle 2 collision
+        IF (px >= obstacle2_x AND px <= obstacle2_x + 90) THEN
+
+            IF obstacle2_type = 0 THEN
+                dx := px - (obstacle2_x + 45);
+                dy := py - obstacle2_top;
+
+                IF (dx*dx + dy*dy <= 60*60) THEN
+                    game_on <= '0';
+                END IF;
+
+            ELSIF obstacle2_type = 1 THEN
+                IF (px >= obstacle2_x AND px <= obstacle2_x + 80 AND
+                    py >= obstacle2_bot AND py <= obstacle2_bot + 200) THEN
+                    game_on <= '0';
+                END IF;
+
+            ELSE
+                dx := px - (obstacle2_x + 40);
+                dy := py - obstacle2_bot;
+
+                IF (dx*dx + dy*dy <= 45*45) THEN
+                    game_on <= '0';
+                END IF;
+            END IF;
+
+        END IF;
+
+        -- Obstacle 3 collision
+        IF (px >= obstacle3_x AND px <= obstacle3_x + 90) THEN
+
+            IF obstacle3_type = 0 THEN
+                dx := px - (obstacle3_x + 45);
+                dy := py - obstacle3_top;
+
+                IF (dx*dx + dy*dy <= 60*60) THEN
+                    game_on <= '0';
+                END IF;
+
+            ELSIF obstacle3_type = 1 THEN
+                IF (px >= obstacle3_x AND px <= obstacle3_x + 80 AND
+                    py >= obstacle3_bot AND py <= obstacle3_bot + 200) THEN
+                    game_on <= '0';
+                END IF;
+
+            ELSE
+                dx := px - (obstacle3_x + 40);
+                dy := py - obstacle3_bot;
 
                 IF (dx*dx + dy*dy <= 45*45) THEN
                     game_on <= '0';
