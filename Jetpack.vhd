@@ -3,6 +3,7 @@ USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.STD_LOGIC_ARITH.ALL;
 USE IEEE.STD_LOGIC_UNSIGNED.ALL;
 
+
 ENTITY pong IS
     PORT (
         clk_in : IN STD_LOGIC;
@@ -20,6 +21,7 @@ ENTITY pong IS
     ); 
 END pong;
 
+
 ARCHITECTURE Behavioral OF pong IS
     SIGNAL pxl_clk : STD_LOGIC := '0';
     SIGNAL S_red, S_green, S_blue : STD_LOGIC;
@@ -30,6 +32,16 @@ ARCHITECTURE Behavioral OF pong IS
     SIGNAL display : STD_LOGIC_VECTOR (15 DOWNTO 0);
     SIGNAL led_mpx : STD_LOGIC_VECTOR (2 DOWNTO 0);
     SIGNAL hits_value : STD_LOGIC_VECTOR (15 DOWNTO 0);
+
+COMPONENT leddec16 IS
+    PORT (
+        dig   : IN  STD_LOGIC_VECTOR (2 DOWNTO 0);
+        score : IN  STD_LOGIC_VECTOR (11 DOWNTO 0);
+        coins : IN  STD_LOGIC_VECTOR (11 DOWNTO 0);
+        anode : OUT STD_LOGIC_VECTOR (7 DOWNTO 0);
+        seg   : OUT STD_LOGIC_VECTOR (6 DOWNTO 0)
+    );
+END COMPONENT;
 
     COMPONENT bat_n_ball IS
         PORT (
@@ -85,9 +97,18 @@ BEGIN
         END IF;
     END PROCESS;
 
-    led_mpx <= count(19 DOWNTO 17);
-    display <= hits_value;
-    LED <= hits_value;
+  led_mpx <= count(19 DOWNTO 17);
+  LED <= hits_value;
+
+led1 : leddec16
+PORT MAP(
+    dig   => led_mpx,
+    score => (OTHERS => '0'),                -- not used
+    coins => hits_value(11 DOWNTO 0),        -- ONLY show coins
+    anode => SEG7_anode,
+    seg   => SEG7_seg
+);
+
 
     add_bb : bat_n_ball
     PORT MAP(
