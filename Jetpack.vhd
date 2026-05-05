@@ -32,6 +32,7 @@ ARCHITECTURE Behavioral OF pong IS
     SIGNAL display : STD_LOGIC_VECTOR (15 DOWNTO 0);
     SIGNAL led_mpx : STD_LOGIC_VECTOR (2 DOWNTO 0);
     SIGNAL hits_value : STD_LOGIC_VECTOR (15 DOWNTO 0);
+    SIGNAL distance_value : STD_LOGIC_VECTOR (15 DOWNTO 0);
 
 COMPONENT leddec16 IS
     PORT (
@@ -54,7 +55,8 @@ END COMPONENT;
             red : OUT STD_LOGIC;
             green : OUT STD_LOGIC;
             blue : OUT STD_LOGIC;
-            hits : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
+            hits : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
+            distance : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
         );
     END COMPONENT;
 
@@ -103,8 +105,8 @@ BEGIN
 led1 : leddec16
 PORT MAP(
     dig   => led_mpx,
-    score => (OTHERS => '0'),                -- not used
-    coins => hits_value(11 DOWNTO 0),        -- ONLY show coins
+    score => distance_value(11 DOWNTO 0),    -- LEFT 4 digits: distance score
+    coins => hits_value(11 DOWNTO 0),        -- RIGHT 4 digits: coin count
     anode => SEG7_anode,
     seg   => SEG7_seg
 );
@@ -120,7 +122,8 @@ PORT MAP(
         red => S_red, 
         green => S_green, 
         blue => S_blue,
-        hits => hits_value
+        hits => hits_value,
+        distance => distance_value
     );
     
     vga_driver : vga_sync
