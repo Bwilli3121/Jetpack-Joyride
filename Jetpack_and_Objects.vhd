@@ -3,12 +3,12 @@ USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.STD_LOGIC_ARITH.ALL;
 USE IEEE.STD_LOGIC_UNSIGNED.ALL;
 
-ENTITY bat_n_ball IS
+ENTITY jetpack_and_objects IS
     PORT (
         v_sync    : IN  STD_LOGIC;
         pixel_row : IN  STD_LOGIC_VECTOR(10 DOWNTO 0);
         pixel_col : IN  STD_LOGIC_VECTOR(10 DOWNTO 0);
-        bat_x     : IN  STD_LOGIC_VECTOR (10 DOWNTO 0);
+        jetpack_x     : IN  STD_LOGIC_VECTOR (10 DOWNTO 0);
         serve     : IN  STD_LOGIC;
         red       : OUT STD_LOGIC;
         green     : OUT STD_LOGIC;
@@ -16,9 +16,9 @@ ENTITY bat_n_ball IS
         hits      : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
         distance  : OUT STD_LOGIC_VECTOR(15 DOWNTO 0)
     );
-END bat_n_ball;
+END jetpack_and_objects;
 
-ARCHITECTURE Behavioral OF bat_n_ball IS
+ARCHITECTURE Behavioral OF jetpack_and_objects IS
 SIGNAL obstacle_x : INTEGER := 800;
 --SIGNAL gap_y : INTEGER := 300;
 SIGNAL top_height    : INTEGER := 200;
@@ -40,19 +40,19 @@ SIGNAL coin2_y : INTEGER := 350;
 SIGNAL coin2_active : STD_LOGIC := '1';
 
     CONSTANT bsize        : INTEGER := 8;
-    CONSTANT bat_h        : INTEGER := 3;
-    CONSTANT bat_w_start  : INTEGER := 40;
-    CONSTANT bat_w_min    : INTEGER := 4;
+    CONSTANT jetpack_h        : INTEGER := 3;
+    CONSTANT jetpack_w_start  : INTEGER := 40;
+    CONSTANT jetpack_w_min    : INTEGER := 4;
     CONSTANT base_speed   : INTEGER := 3;
 
     SIGNAL ball_on   : STD_LOGIC;
-    SIGNAL bat_on    : STD_LOGIC;
+    SIGNAL jetpack_on    : STD_LOGIC;
     SIGNAL game_on   : STD_LOGIC := '0';
 
     SIGNAL ball_x : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(400, 11);
     SIGNAL ball_y : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(300, 11);
 
-    --CONSTANT bat_y : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(500, 11);
+    --CONSTANT jetpack_y : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(500, 11);
     SIGNAL player_y : INTEGER := 300;
     SIGNAL velocity_y : INTEGER := 0;
 
@@ -60,7 +60,7 @@ SIGNAL coin2_active : STD_LOGIC := '1';
     SIGNAL ball_y_motion : STD_LOGIC_VECTOR(10 DOWNTO 0) := CONV_STD_LOGIC_VECTOR(base_speed, 11);
 
     SIGNAL hit_count   : INTEGER := 0;
-    SIGNAL bat_w_cur   : INTEGER := bat_w_start;
+    SIGNAL jetpack_w_cur   : INTEGER := jetpack_w_start;
     SIGNAL hit_latched : STD_LOGIC := '0';
     
     SIGNAL particle_on : STD_LOGIC;
@@ -85,7 +85,7 @@ distance <= CONV_STD_LOGIC_VECTOR(distance_score, 16);
 
 --obstacle_type <= (obstacle_type + 1) mod 3;
 
-colordraw : PROCESS(bat_on, obstacle_on, coin_on, particle_on)
+colordraw : PROCESS(jetpack_on, obstacle_on, coin_on, particle_on)
 BEGIN
     -- background = white
     red   <= '1';
@@ -93,7 +93,7 @@ BEGIN
     blue  <= '1';
 
     -- player = red
-    IF bat_on = '1' THEN
+    IF jetpack_on = '1' THEN
         red   <= '1';
         green <= '0';
         blue  <= '0';
@@ -141,7 +141,7 @@ END PROCESS;
         END IF;
     END PROCESS;
 
-batdraw : PROCESS (bat_x, pixel_row, pixel_col)
+jetpackdraw : PROCESS (jetpack_x, pixel_row, pixel_col)
 
     type sprite_type is array (0 to 31) of std_logic_vector(127 downto 0);
 
@@ -186,14 +186,14 @@ batdraw : PROCESS (bat_x, pixel_row, pixel_col)
     variable idx : INTEGER;
 
 BEGIN
-    --bx := CONV_INTEGER(bat_x);
+    --bx := CONV_INTEGER(jetpack_x);
     bx := 200;  -- fixed x position
     by := player_y;
 
     px := CONV_INTEGER(pixel_col) - bx;
     py := CONV_INTEGER(pixel_row) - by;
 
-    bat_on <= '0';
+    jetpack_on <= '0';
 
     IF (px >= 0 AND px < 32 AND py >= 0 AND py < 32) THEN
 
@@ -201,7 +201,7 @@ BEGIN
         pixel_bits := sprite(py)(idx downto idx-3);
 
         IF pixel_bits /= "0000" THEN
-            bat_on <= '1';
+            jetpack_on <= '1';
         END IF;
     END IF;
 END PROCESS;
