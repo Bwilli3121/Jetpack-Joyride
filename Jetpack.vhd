@@ -4,7 +4,7 @@ USE IEEE.STD_LOGIC_ARITH.ALL;
 USE IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 
-ENTITY pong IS
+ENTITY jetpack IS
     PORT (
         clk_in : IN STD_LOGIC;
         VGA_red : OUT STD_LOGIC_VECTOR (3 DOWNTO 0);
@@ -19,10 +19,10 @@ ENTITY pong IS
         LED : OUT STD_LOGIC_VECTOR(15 DOWNTO 0);
         SEG7_seg : OUT STD_LOGIC_VECTOR (6 DOWNTO 0)
     ); 
-END pong;
+END jetpack;
 
 
-ARCHITECTURE Behavioral OF pong IS
+ARCHITECTURE Behavioral OF jetpack IS
     SIGNAL pxl_clk : STD_LOGIC := '0';
     SIGNAL S_red, S_green, S_blue : STD_LOGIC;
     SIGNAL S_vsync : STD_LOGIC;
