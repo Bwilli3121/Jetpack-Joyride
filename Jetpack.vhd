@@ -44,7 +44,7 @@ COMPONENT leddec16 IS
     );
 END COMPONENT;
 
-    COMPONENT bat_n_ball IS
+    COMPONENT jetpack_and_objects IS
         PORT (
             v_sync : IN STD_LOGIC;
             pixel_row : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
@@ -112,7 +112,7 @@ PORT MAP(
 );
 
 
-    add_bb : bat_n_ball
+    add_bb : jetpack_and_objects
     PORT MAP(
         v_sync => S_vsync, 
         pixel_row => S_pixel_row, 
