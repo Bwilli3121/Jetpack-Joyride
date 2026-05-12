@@ -28,6 +28,8 @@ Our Project recreates the mobile phone game Jetpack Joyride, using a sprite of a
 ---
 ## Video Demonstration
 [![Watch the video](https://img.youtube.com/vi/[<VIDEO_ID>](https://youtu.be/u_vh7JEoxjg)/hqdefault.jpg)](https://youtu.be/u_vh7JEoxjg)
+
+
 ---
 ## Inputs and Outputs
 For Jetpack.vhd:
