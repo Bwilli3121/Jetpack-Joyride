@@ -89,6 +89,7 @@ Finally, for the leddec file we needed to change the leds to display basic numbe
 
 ---
 ## Modules & FSMs
+<img width="392" height="206" alt="image" src="https://github.com/user-attachments/assets/5ab6bbc6-79b8-4f55-96bf-b6f1586028f0" />
 
 
 ---
