@@ -93,8 +93,8 @@ Finally, for the leddec file we needed to change the leds to display basic numbe
 
 
 ---
-Summary
-Individual Contributions
+## Summary
+Individual Contributions:
 Alison Dutton — Primary developer of the game engine (jetpack_and_objects.vhd). Alison designed and implemented the core gameplay systems including player physics (gravity and flap mechanics), obstacle generation and scrolling logic, coin spawning and collection, collision detection using dx²+dy² integer math, and the colordraw color priority process. She also handled the sprite integration into the jetpackdraw process.
 Andrej Rinkovsky — Responsible for the clock wizard configuration (clk_wiz_0, clk_wiz_0_clk_wiz) and the leddec16 7-segment display module, including the Double Dabble BCD conversion and the dual-score display layout (distance on the left four digits, coins on the right four). Also contributed to project documentation, the presentation poster, and the block diagrams and FSM diagrams in the repository.
 Brennan Williams — Contributed to game engine development and was the primary tester throughout the project, identifying and helping resolve bugs related to obstacle collision detection, game speed tuning, and edge-case behavior. Also led report writing and poster design for the final presentation.
